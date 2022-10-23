@@ -94,6 +94,7 @@ func (m TodoModel) Get(id int64) (*Todo, error) {
 }
 
 // Update() allows us to edit/alter a specific Todo
+// Optimistic locking (version number)
 func (m TodoModel) Update(todo *Todo) error {
 	// Create a query
 	query := `
@@ -101,6 +102,7 @@ func (m TodoModel) Update(todo *Todo) error {
 		SET name = $1, details = $2, priority = $3,
 		    status = $4, version = version + 1
 		WHERE id = $5
+		AND version = $6
 		RETURNING version
 	`
 	args := []interface{}{
@@ -109,8 +111,19 @@ func (m TodoModel) Update(todo *Todo) error {
 		todo.Priority,
 		todo.Status,
 		todo.ID,
+		todo.Version,
 	}
-	return m.DB.QueryRow(query, args...).Scan(&todo.Version)
+	// Check for edit conflicts
+	err := m.DB.QueryRow(query, args...).Scan(&todo.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete() removes a specific Todo
