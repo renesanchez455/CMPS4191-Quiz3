@@ -92,7 +92,7 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (app *application) updateTodoHandler(w http.ResponseWriter, r *http.Request) {
-	// This method does a complete replacement
+	// This method does a partial replacement
 	// Get the id for the todo that needs updating
 	id, err := app.readIDParam(r)
 	if err != nil {
@@ -111,12 +111,16 @@ func (app *application) updateTodoHandler(w http.ResponseWriter, r *http.Request
 		}
 		return
 	}
+
 	// Create an input struct to hold data read in from the client
+	// We update input struct to use pointers because pointers have a
+	// default value of nil
+	// If a field remains nil then we know that the client did not update it
 	var input struct {
-		Name     string `json:"name"`
-		Details  string `json:"Details"`
-		Priority string `json:"priority"`
-		Status   string `json:"status"`
+		Name     *string `json:"name"`
+		Details  *string `json:"Details"`
+		Priority *string `json:"priority"`
+		Status   *string `json:"status"`
 	}
 
 	// Initialize a new json.Decoder instance
@@ -126,12 +130,20 @@ func (app *application) updateTodoHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Copy / Update the fields / values in the todo variable using the fields
-	// in the input struct
-	todo.Name = input.Name
-	todo.Details = input.Details
-	todo.Priority = input.Priority
-	todo.Status = input.Status
+	// Check for updates
+	if input.Name != nil {
+		todo.Name = *input.Name
+	}
+	if input.Details != nil {
+		todo.Details = *input.Details
+	}
+	if input.Priority != nil {
+		todo.Priority = *input.Priority
+	}
+	if input.Status != nil {
+		todo.Status = *input.Status
+	}
+
 	// Perform validation on the updated Todo. If validation fails, then
 	// we send a 422 - Unprocessable Entity respose to the client
 	// Initialize a new Validator instance
