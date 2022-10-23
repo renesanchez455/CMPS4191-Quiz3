@@ -90,3 +90,67 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *application) updateTodoHandler(w http.ResponseWriter, r *http.Request) {
+	// This method does a complete replacement
+	// Get the id for the todo that needs updating
+	id, err := app.readIDParam(r)
+	if err != nil {
+		app.notFoundResponse(w, r)
+		return
+	}
+	// Fetch the orginal record from the database
+	todo, err := app.models.Todos.Get(id)
+	// Handle errors
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
+	}
+	// Create an input struct to hold data read in from the client
+	var input struct {
+		Name     string `json:"name"`
+		Details  string `json:"Details"`
+		Priority string `json:"priority"`
+		Status   string `json:"status"`
+	}
+
+	// Initialize a new json.Decoder instance
+	err = app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	// Copy / Update the fields / values in the todo variable using the fields
+	// in the input struct
+	todo.Name = input.Name
+	todo.Details = input.Details
+	todo.Priority = input.Priority
+	todo.Status = input.Status
+	// Perform validation on the updated Todo. If validation fails, then
+	// we send a 422 - Unprocessable Entity respose to the client
+	// Initialize a new Validator instance
+	v := validator.New()
+
+	// Check the map to determine if there were any validation errors
+	if data.ValidateTodo(v, todo); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+	// Pass the updated Todo record to the Update() method
+	err = app.models.Todos.Update(todo)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	// Write the data returned by Get()
+	err = app.writeJSON(w, http.StatusOK, envelope{"todo": todo}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
