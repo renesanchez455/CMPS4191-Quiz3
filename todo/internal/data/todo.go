@@ -184,8 +184,8 @@ func (m TodoModel) GetAll(name string, priority string, filters Filters) ([]*Tod
 		SELECT id, created_at, name, details,
 		       priority, status, version
 		FROM todo
-		WHERE (LOWER(name) = LOWER($1) OR $1 = '')
-		AND (LOWER(priority) = LOWER($2) OR $2 = '')
+		WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '')
+		AND (to_tsvector('simple', priority) @@ plainto_tsquery('simple', $2) OR $2 = '')
 		ORDER BY id
 	`
 	// Create a 3-second-timout context
