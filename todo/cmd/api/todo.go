@@ -9,9 +9,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 // createTodoHandler for the "POST /v1/todo" endpoint
@@ -21,11 +18,8 @@ func (app *application) createTodoHandler(w http.ResponseWriter, r *http.Request
 
 // showSchoolHandler for the "GET /v1/todo/:id" endpoint
 func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) {
-	// Use the "ParamsFromContext()" function to get the request context as a slice
-	params := httprouter.ParamsFromContext(r.Context())
-	// Get the value of the "id" parameter
-	id, err := strconv.ParseInt(params.ByName("id"), 10, 64)
-	if err != nil || id < 1 {
+	id, err := app.readIDParam(r)
+	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
