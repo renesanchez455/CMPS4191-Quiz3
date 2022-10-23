@@ -48,16 +48,15 @@ func (m TodoModel) Insert(todo *Todo) error {
 		VALUES ($1, $2, $3, $4)
 		RETURNING id, created_at, version
 	`
-	// Create a context
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Cleanup to prevent memory leaks
-	defer cancel()
-
 	// Collect the data fields into a slice
 	args := []interface{}{
 		todo.Name, todo.Details,
 		todo.Priority, todo.Status,
 	}
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&todo.ID, &todo.CreatedAt, &todo.Version)
 }
 
@@ -117,12 +116,6 @@ func (m TodoModel) Update(todo *Todo) error {
 		AND version = $6
 		RETURNING version
 	`
-
-	// Create a context
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Cleanup to prevent memory leaks
-	defer cancel()
-
 	args := []interface{}{
 		todo.Name,
 		todo.Details,
@@ -131,6 +124,11 @@ func (m TodoModel) Update(todo *Todo) error {
 		todo.ID,
 		todo.Version,
 	}
+
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	// Check for edit conflicts
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&todo.Version)
 	if err != nil {
