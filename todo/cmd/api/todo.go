@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"todo.renesanchez455.net/internal/data"
+	"todo.renesanchez455.net/internal/validator"
 )
 
 // createTodoHandler for the "POST /v1/todo" endpoint
@@ -29,6 +30,24 @@ func (app *application) createTodoHandler(w http.ResponseWriter, r *http.Request
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
+	// Copy the values from the input struct to a new Todo struct
+	todo := &data.Todo{
+		Name:     input.Name,
+		Details:  input.Details,
+		Priority: input.Priority,
+		Status:   input.Status,
+	}
+
+	// Initialize a new Validator instance
+	v := validator.New()
+
+	// Check the map to determine if there were any validation errors
+	if data.ValidateTodo(v, todo); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	// Display the request
 	fmt.Fprintf(w, "%+v\n", input)
 }
@@ -41,7 +60,7 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Create a new instance of the School struct containing the ID we extracted
+	// Create a new instance of the Todo struct containing the ID we extracted
 	// from our URL and some sample data
 	todo := data.Todo{
 		ID:        id,
@@ -52,7 +71,7 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 		Status:    "Pending",
 		Version:   1,
 	}
-	err = app.writeJSON(w, http.StatusOK, envelope{"school": todo}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"todo": todo}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
