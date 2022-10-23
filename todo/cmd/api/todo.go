@@ -7,6 +7,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -16,14 +17,28 @@ import (
 
 // createTodoHandler for the "POST /v1/todo" endpoint
 func (app *application) createTodoHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "create a new todo..")
+	// Our target decode destination
+	var input struct {
+		Name     string `json:"name"`
+		Details  string `json:"Details"`
+		Priority string `json:"priority"`
+		Status   string `json:"status"`
+	}
+	// Initialize a new json.Decoder instance
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Display the request
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 // showSchoolHandler for the "GET /v1/todo/:id" endpoint
 func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -38,10 +53,8 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 		Status:    "Pending",
 		Version:   1,
 	}
-	err = app.writeJSON(w, http.StatusOK, todo, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"school": todo}, nil)
 	if err != nil {
-		app.logger.Println(err)
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
-
 }
