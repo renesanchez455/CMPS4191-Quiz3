@@ -204,9 +204,8 @@ func (app *application) deleteTodoHandler(w http.ResponseWriter, r *http.Request
 func (app *application) listTodoHandler(w http.ResponseWriter, r *http.Request) {
 	// Create an input struct to hold our query parameters
 	var input struct {
-		Name  string
-		Level string
-		Mode  []string
+		Name     string
+		Priority string
 		data.Filters
 	}
 	// Initialize a validator
@@ -215,20 +214,29 @@ func (app *application) listTodoHandler(w http.ResponseWriter, r *http.Request) 
 	qs := r.URL.Query()
 	// Use the helper methods to extract the values
 	input.Name = app.readString(qs, "name", "")
-	input.Level = app.readString(qs, "level", "")
-	input.Mode = app.readCSV(qs, "mode", []string{})
+	input.Priority = app.readString(qs, "priority", "")
 	// Get the page information
 	input.Filters.Page = app.readInt(qs, "page", 1, v)
 	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
 	// Get the sort information
 	input.Filters.Sort = app.readString(qs, "sort", "id")
 	// Specific the allowed sort values
-	input.Filters.SortList = []string{"id", "name", "level", "-id", "-name", "-level"}
+	input.Filters.SortList = []string{"id", "name", "priority", "-id", "-name", "-priority"}
 	// Check for validation errors
 	if data.ValidateFilters(v, input.Filters); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Results dump
-	fmt.Fprintf(w, "%+v\n", input)
+	// Get a listing of all todos
+	todos, err := app.models.Todos.GetAll(input.Name, input.Priority, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	// Send a JSON response containg all the todos
+	err = app.writeJSON(w, http.StatusOK, envelope{"todos": todos}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }

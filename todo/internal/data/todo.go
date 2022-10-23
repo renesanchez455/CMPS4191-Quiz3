@@ -176,3 +176,53 @@ func (m TodoModel) Delete(id int64) error {
 	}
 	return nil
 }
+
+// The GetAll() method retuns a list of all the todos sorted by id
+func (m TodoModel) GetAll(name string, priority string, filters Filters) ([]*Todo, error) {
+	// Construct the query
+	query := `
+		SELECT id, created_at, name, details,
+		       priority, status, version
+		FROM todo
+		WHERE (LOWER(name) = LOWER($1) OR $1 = '')
+		AND (LOWER(priority) = LOWER($2) OR $2 = '')
+		ORDER BY id
+	`
+	// Create a 3-second-timout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	// Execute the query
+	rows, err := m.DB.QueryContext(ctx, query, name, priority)
+	if err != nil {
+		return nil, err
+	}
+	// Close the resultset
+	defer rows.Close()
+	// Initialize an empty slice to hold the Todo data
+	todos := []*Todo{}
+	// Iterate over the rows in the resultset
+	for rows.Next() {
+		var todo Todo
+		// Scan the values from the row into todo
+		err := rows.Scan(
+			&todo.ID,
+			&todo.CreatedAt,
+			&todo.Name,
+			&todo.Details,
+			&todo.Priority,
+			&todo.Status,
+			&todo.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+		// Add the Todo to our slice
+		todos = append(todos, &todo)
+	}
+	// Check for errors after looping through the resultset
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	// Return the slice of Todos
+	return todos, nil
+}
