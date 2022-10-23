@@ -4,6 +4,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"todo.renesanchez455.net/internal/validator"
@@ -56,7 +57,40 @@ func (m TodoModel) Insert(todo *Todo) error {
 
 // Get() allows us to retrieve a specific Todo
 func (m TodoModel) Get(id int64) (*Todo, error) {
-	return nil, nil
+	// Ensure that there is a valid id
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	// Create the query
+	query := `
+		SELECT id, created_at, name, details, priority, status, version
+		FROM todo
+		WHERE id = $1
+	`
+	// Declare a Todo variable to hold the returned data
+	var todo Todo
+	// Execute the query using QueryRow()
+	err := m.DB.QueryRow(query, id).Scan(
+		&todo.ID,
+		&todo.CreatedAt,
+		&todo.Name,
+		&todo.Details,
+		&todo.Priority,
+		&todo.Status,
+		&todo.Version,
+	)
+	// Handle any errors
+	if err != nil {
+		// Check the type of error
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	// Success
+	return &todo, nil
 }
 
 // Update() allows us to edit/alter a specific Todo

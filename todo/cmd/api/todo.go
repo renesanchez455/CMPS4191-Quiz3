@@ -7,9 +7,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"todo.renesanchez455.net/internal/data"
 	"todo.renesanchez455.net/internal/validator"
@@ -72,17 +72,19 @@ func (app *application) showTodoHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Create a new instance of the Todo struct containing the ID we extracted
-	// from our URL and some sample data
-	todo := data.Todo{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Name:      "Laundry",
-		Details:   "Wash white shirts",
-		Priority:  "High",
-		Status:    "Pending",
-		Version:   1,
+	// Fetch the specific todo
+	todo, err := app.models.Todos.Get(id)
+	// Handle errors
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
+	// Write the data returned by Get()
 	err = app.writeJSON(w, http.StatusOK, envelope{"todo": todo}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
