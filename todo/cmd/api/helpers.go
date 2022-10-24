@@ -1,4 +1,8 @@
-// Filename: cms/api/helpers.go
+/*
+	CMPS4191 - Quiz #3
+	Rene Sanchez - 2018118383
+*/
+// Filename: cmd/api/helpers.go
 
 package main
 

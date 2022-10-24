@@ -1,3 +1,7 @@
+/*
+	CMPS4191 - Quiz #3
+	Rene Sanchez - 2018118383
+*/
 // Filename: internal/data/models.go
 
 package data
